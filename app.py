@@ -8,8 +8,10 @@ YTDLP_CMD = [
     "yt-dlp",
     "-f", "ba/b",
     "-g",
-    "--cookies", "cookies.txt"
+    "--cookies", "cookies.txt",
+    "--js-runtimes", "node"
 ]
+
 
 @app.route("/")
 def health():
