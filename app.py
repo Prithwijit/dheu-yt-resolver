@@ -1,7 +1,15 @@
 from flask import Flask, request, jsonify
-import yt_dlp
+import subprocess
+import shlex
 
 app = Flask(__name__)
+
+YTDLP_CMD = [
+    "yt-dlp",
+    "-f", "ba/b",
+    "-g",
+    "--cookies", "cookies.txt"
+]
 
 @app.route("/resolve")
 def resolve():
@@ -9,33 +17,34 @@ def resolve():
     if not yt_url:
         return jsonify({"error": "missing yt parameter"}), 400
 
-    ydl_opts = {
-        "quiet": True,
-        "skip_download": True,
-        "format": "bestaudio/best",
-        "noplaylist": True
-    }
+    cmd = YTDLP_CMD + [yt_url]
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(yt_url, download=False)
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "yt-dlp timeout"}), 504
 
-            return jsonify({
-                "title": info.get("title"),
-                "duration": info.get("duration"),
-                "audio_url": info.get("url"),
-                "codec": info.get("acodec")
-            })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if proc.returncode != 0:
+        return jsonify({
+            "error": "yt-dlp failed",
+            "details": proc.stderr.strip()
+        }), 500
 
+    # yt-dlp may return multiple lines; take the first valid URL
+    lines = [l.strip() for l in proc.stdout.splitlines() if l.startswith("http")]
+    if not lines:
+        return jsonify({"error": "no stream url found"}), 500
+
+    return jsonify({
+        "status": "ok",
+        "stream_url": lines[0]
+    })
 
 @app.route("/")
 def health():
-    return "yt-dlp resolver OK"
-
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
-
+    return "YT Resolver OK"
