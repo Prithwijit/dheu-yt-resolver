@@ -4,14 +4,22 @@ import os
 
 app = Flask(__name__)
 
+COOKIES_PATH = "/app/cookies.txt"
+
+# ---- Startup sanity check ----
+if not os.path.exists(COOKIES_PATH):
+    print("❌ cookies.txt NOT FOUND at", COOKIES_PATH)
+else:
+    print("✅ cookies.txt found at", COOKIES_PATH)
+    print("📄 size:", os.path.getsize(COOKIES_PATH), "bytes")
+
 YTDLP_CMD = [
     "yt-dlp",
     "-f", "ba/b",
     "-g",
-    "--cookies", "cookies.txt",
+    "--cookies", COOKIES_PATH,
     "--js-runtimes", "node"
 ]
-
 
 @app.route("/")
 def health():
@@ -52,5 +60,5 @@ def resolve():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Render provides PORT
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
