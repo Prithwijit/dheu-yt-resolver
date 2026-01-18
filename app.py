@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import subprocess
-import shlex
+import os
 
 app = Flask(__name__)
 
@@ -10,6 +10,10 @@ YTDLP_CMD = [
     "-g",
     "--cookies", "cookies.txt"
 ]
+
+@app.route("/")
+def health():
+    return "YT Resolver OK"
 
 @app.route("/resolve")
 def resolve():
@@ -35,7 +39,6 @@ def resolve():
             "details": proc.stderr.strip()
         }), 500
 
-    # yt-dlp may return multiple lines; take the first valid URL
     lines = [l.strip() for l in proc.stdout.splitlines() if l.startswith("http")]
     if not lines:
         return jsonify({"error": "no stream url found"}), 500
@@ -45,6 +48,7 @@ def resolve():
         "stream_url": lines[0]
     })
 
-@app.route("/")
-def health():
-    return "YT Resolver OK"
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))  # Render provides PORT
+    app.run(host="0.0.0.0", port=port, debug=False)
